@@ -6,7 +6,7 @@
     <title>Флэш‑карточки из Google Sheet (CSV)</title>
     <style>
         :root {
-            --bg: #1b306d; /* slate-900 */
+            --bg: #162453; /* slate-900 */
             --ink: #e5e7eb; /* gray-200 */
             --muted: #94a3b8; /* slate-400 */
             --shadow: 0 25px 50px rgba(0, 0, 0, .35), 0 8px 24px rgba(0, 0, 0, .25);
@@ -148,7 +148,7 @@
             align-items: center;
             justify-content: center;
             padding: 6vw;
-            background: linear-gradient(180deg, #0f172a, #0b1220);
+            background: linear-gradient(180deg, #0f172a, #1e293b);
             border-radius: 24px;
             box-shadow: var(--shadow);
             border: 1px solid rgba(255, 255, 255, .08);
@@ -158,7 +158,8 @@
         }
 
         .back {
-            transform: rotateY(180deg)
+            transform: rotateY(180deg);
+            background: linear-gradient(180deg, #0b1220, #020617);
         }
 
         .card-text {
@@ -443,6 +444,7 @@
             const csvUrl = toCsvUrl(rawUrl);
             localStorage.setItem('csvUrl', rawUrl);
             const frontIdx = parseInt($('#frontSelect').value, 10) || 0;
+            const backIdx = 1 - frontIdx
 
             primeSkeleton(true);
             showToast('Загружаю данные…');
@@ -453,7 +455,7 @@
                 const skipHeader = $('#skipHeader').checked;
                 const dataRows = skipHeader && filtered.length ? filtered.slice(1) : filtered;
                 cards = dataRows
-                    .map(r => ({front: (r[frontIdx] || '').trim(), back: (r[1 - frontIdx] || '').trim()}))
+                    .map(r => ({front: (r[frontIdx] || '').trim(), back: (r[backIdx] || '').trim()}))
                     .filter(c => c.front !== '' || c.back !== '');
                 if (cards.length === 0) throw new Error('Не найдено ни одной пары столбцов');
                 prepareCycle();
