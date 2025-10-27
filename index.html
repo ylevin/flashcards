@@ -134,7 +134,7 @@
             width: 100%;
             height: 100%;
             transform-style: preserve-3d;
-            transition: transform 600ms cubic-bezier(.2, .7, .1, 1), filter 600ms;
+            transition: transform 1000ms cubic-bezier(.2, .7, .1, 1), filter 1000ms;
         }
 
         .card.flipped {
@@ -274,7 +274,9 @@
     // ---------- Utilities ----------
     const $ = sel => document.querySelector(sel);
 
-    function showToast(msg, timeout = 2200) {
+    const MESSAGE_TIMEOUT = 2200
+
+    function showToast(msg, timeout = MESSAGE_TIMEOUT) {
         const t = $('#toast');
         t.textContent = msg;
         t.classList.remove('hidden');
@@ -387,23 +389,25 @@
         renderCard();
     }
 
-    function setCardTexts(frontText, backText) {
-        const front = document.querySelector('.front .card-text');
-        const back = document.querySelector('.back .card-text');
-        front.textContent = frontText || '';
-        back.textContent = backText || '';
-        const fmut = document.querySelector('.front .muted');
-        const bmut = document.querySelector('.back .muted');
-        fmut.textContent = 'Лицевая сторона';
-        bmut.textContent = 'Обратная сторона';
+    function setFrontCardText(text) {
+        document.querySelector('.front .card-text').textContent = text || '';
+        document.querySelector('.front .muted').textContent = 'Лицевая сторона';
+    }
+
+    function setBackCardText(text) {
+        document.querySelector('.back .card-text').textContent = text || '';
+        document.querySelector('.back .muted').textContent = 'Обратная сторона';
     }
 
     function renderCard() {
-        const cardEl = $('#card');
+        const cardElem = $('#card');
         const data = currentCard();
-        setCardTexts(data.front, data.back);
-        cardEl.classList.toggle('flipped', !showingFront);
-        cardEl.setAttribute('aria-pressed', (!showingFront).toString());
+        setFrontCardText(data.front);
+        if (!showingFront) {
+            setBackCardText(data.back);
+        }
+        cardElem.classList.toggle('flipped', !showingFront);
+        cardElem.setAttribute('aria-pressed', (!showingFront).toString());
     }
 
     function onCardClick() {
