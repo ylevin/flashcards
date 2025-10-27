@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Флэш‑карточки из Google Sheet (CSV)</title>
+    <style>
+        :root {
+            --bg: #0f172a; /* slate-900 */
+            --ink: #e5e7eb; /* gray-200 */
+            --muted: #94a3b8; /* slate-400 */
+            --shadow: 0 25px 50px rgba(0, 0, 0, .35), 0 8px 24px rgba(0, 0, 0, .25);
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            margin: 0;
+            background: radial-gradient(1200px 800px at 80% -10%, rgba(34, 211, 238, .08), transparent 60%),
+            radial-gradient(1000px 700px at 20% 110%, rgba(14, 165, 233, .08), transparent 60%),
+            var(--bg);
+            color: var(--ink);
+            font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Inter, Arial;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Top bar */
+        .topbar {
+            position: sticky;
+            top: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            z-index: 5;
+            backdrop-filter: blur(8px);
+            background: linear-gradient(180deg, rgba(17, 24, 39, .85), rgba(17, 24, 39, .55));
+            border-bottom: 1px solid rgba(255, 255, 255, .06);
+        }
+
+        .topbar-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: flex;
+            gap: 10px;
+            padding: 10px;
+            align-items: center;
+            flex-wrap: wrap
+        }
+
+        .url {
+            flex: 1;
+            display: flex;
+            gap: 8px;
+            align-items: stretch;
+            min-width: 320px
+        }
+
+        input[type="url"], select {
+            flex: 1;
+            padding: 12px 14px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, .1);
+            background: #0b1220;
+            color: var(--ink);
+            outline: none;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .04);
+        }
+
+        select {
+            flex: 0 0 auto
+        }
+
+        .btn {
+            padding: 12px 16px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, .12);
+            background: linear-gradient(180deg, #1f2937, #111827);
+            color: var(--ink);
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform .06s ease, box-shadow .2s ease, background .2s ease;
+        }
+
+        .btn:active {
+            transform: translateY(1px)
+        }
+
+        .btn.primary {
+            background: linear-gradient(180deg, #0891b2, #075985);
+            border-color: #0ea5b7;
+            box-shadow: 0 10px 20px rgba(14, 165, 233, .25)
+        }
+
+        .hint {
+            color: var(--muted);
+            font-size: 12px;
+            margin-left: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px
+        }
+
+        /* Main stage */
+        .stage {
+            position: relative;
+            width: 100%;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px
+        }
+
+        /* Card */
+        .card-wrap {
+            perspective: 1400px;
+            width: min(100vw, 1100px);
+            height: min(76vh, 74vw);
+            max-height: 82vh
+        }
+
+        .card {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transform-style: preserve-3d;
+            transition: transform 600ms cubic-bezier(.2, .7, .1, 1), filter 600ms;
+        }
+
+        .card.flipped {
+            transform: rotateY(180deg)
+        }
+
+        .face {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6vw;
+            background: linear-gradient(180deg, #0f172a, #0b1220);
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(255, 255, 255, .08);
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            overflow: hidden;
+        }
+
+        .back {
+            transform: rotateY(180deg)
+        }
+
+        .card-text {
+            width: 100%;
+            text-align: center;
+            line-height: 1.2;
+            font-weight: 700;
+            font-size: min(10vw, 68px);
+            letter-spacing: .2px
+        }
+
+        .muted {
+            font-weight: 600;
+            color: var(--muted);
+            font-size: min(3.6vw, 22px);
+            margin-bottom: 14px
+        }
+
+        .card:not(.flipped) .front .card-text, .card:not(.flipped) .front .muted {
+            animation: popIn 380ms ease both
+        }
+
+        .card.flipped .back .card-text, .card.flipped .back .muted {
+            animation: popIn 380ms ease 90ms both
+        }
+
+        @keyframes popIn {
+            from {
+                opacity: 0;
+                transform: translateY(6px) scale(.985)
+            }
+            to {
+                opacity: 1;
+                transform: none
+            }
+        }
+
+        .toast {
+            position: fixed;
+            left: 50%;
+            bottom: 20px;
+            transform: translateX(-50%);
+            background: #0b1220;
+            color: var(--ink);
+            border: 1px solid rgba(255, 255, 255, .1);
+            padding: 10px 14px;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            opacity: .95;
+            font-size: 14px
+        }
+
+        .hidden {
+            display: none
+        }
+
+        .skeleton {
+            --shine: linear-gradient(110deg, rgba(255, 255, 255, .05) 0%, rgba(255, 255, 255, .18) 15%, rgba(255, 255, 255, .05) 32%);
+            background: #0b1220;
+            background-image: var(--shine);
+            background-size: 200% 100%;
+            animation: shine 1.2s linear infinite;
+        }
+
+        @keyframes shine {
+            to {
+                background-position-x: -200%
+            }
+        }
+    </style>
+</head>
+<body>
+<header class="topbar" role="banner">
+    <div class="topbar-inner">
+        <div class="url">
+            <input id="csvUrl" type="url" placeholder="Вставьте ссылку на Google Sheet или CSV…"
+                   aria-label="Ссылка на Google Sheet или CSV"/>
+            <button id="startBtn" class="btn primary" aria-label="Загрузить карточки">Старт</button>
+        </div>
+        <label class="hint"><input type="checkbox" id="skipHeader"/> Первая строка — заголовки</label>
+        <label class="hint">Лицевая сторона:
+            <select id="frontSelect" aria-label="Выбор колонки для лицевой стороны">
+                <option value="0">Первая колонка</option>
+                <option value="1">Вторая колонка</option>
+            </select>
+        </label>
+    </div>
+</header>
+
+<main class="stage" role="main">
+    <div id="cardWrap" class="card-wrap" aria-live="polite">
+        <div id="card" class="card" tabindex="0" aria-label="Карточка. Нажмите, чтобы перевернуть или перейти далее"
+             aria-pressed="false">
+            <section class="face front skeleton">
+                <div>
+                    <div class="muted">Готово к старту</div>
+                    <div class="card-text">Вставьте ссылку и нажмите «Старт»</div>
+                </div>
+            </section>
+            <section class="face back skeleton">
+                <div>
+                    <div class="muted">Обратная сторона</div>
+                    <div class="card-text">Тут будет вторая колонка</div>
+                </div>
+            </section>
+        </div>
+    </div>
+</main>
+
+<div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+<script>
+    // ---------- Utilities ----------
+    const $ = sel => document.querySelector(sel);
+
+    function showToast(msg, timeout = 2200) {
+        const t = $('#toast');
+        t.textContent = msg;
+        t.classList.remove('hidden');
+        clearTimeout(showToast._tmr);
+        showToast._tmr = setTimeout(() => t.classList.add('hidden'), timeout);
+    }
+
+    function shuffle(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+    }
+
+    // Robust CSV parser (quotes, escaped quotes, CRLF, newlines inside fields)
+    function parseCSV(text) {
+        const rows = [];
+        let row = [];
+        let field = '';
+        let inQuotes = false;
+        let i = 0;
+        while (i < text.length) {
+            const c = text[i];
+            if (inQuotes) {
+                if (c === '"') {
+                    if (text[i + 1] === '"') {
+                        field += '"';
+                        i++;
+                    } else {
+                        inQuotes = false;
+                    }
+                } else {
+                    field += c;
+                }
+            } else {
+                if (c === '"') inQuotes = true;
+                else if (c === ',') {
+                    row.push(field);
+                    field = '';
+                } else if (c === '\n') {
+                    row.push(field);
+                    rows.push(row);
+                    row = [];
+                    field = '';
+                } else if (c === '\r') { /* handle CRLF */
+                    if (text[i + 1] === '\n') {
+                        i++;
+                    }
+                    row.push(field);
+                    rows.push(row);
+                    row = [];
+                    field = '';
+                } else {
+                    field += c;
+                }
+            }
+            i++;
+        }
+        if (field !== '' || row.length) {
+            row.push(field);
+            rows.push(row);
+        }
+        return rows;
+    }
+
+    function toCsvUrl(input) {
+        try {
+            const u = new URL(input);
+            if (u.pathname.endsWith('.csv') || (u.searchParams.get('tqx') || '').includes('out:csv') || u.searchParams.get('format') === 'csv') return u.toString();
+            if (u.hostname.includes('docs.google.com') && u.pathname.includes('/spreadsheets/')) {
+                const parts = u.pathname.split('/');
+                const idIdx = parts.indexOf('d') + 1;
+                const sheetId = parts[idIdx];
+                return `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv`;
+            }
+            return u.toString();
+        } catch (e) {
+            return input.trim();
+        }
+    }
+
+    async function fetchCSV(url) {
+        const res = await fetch(url, {headers: {'Accept': 'text/csv, text/plain; charset=utf-8'}});
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.text();
+    }
+
+    // ---------- App state ----------
+    let cards = [];          // [{front, back}]
+    let order = [];          // shuffled indices for current cycle
+    let idx = 0;             // index inside 'order'
+    let showingFront = true; // whether front currently visible
+
+    function prepareCycle() {
+        order = shuffle([...Array(cards.length).keys()]);
+        idx = 0;
+    }
+
+    function currentCard() {
+        return cards[order[idx]];
+    }
+
+    function nextCard() {
+        idx++;
+        if (idx >= order.length) {
+            prepareCycle();
+        }
+        showingFront = true;
+        renderCard();
+    }
+
+    function setCardTexts(frontText, backText) {
+        const front = document.querySelector('.front .card-text');
+        const back = document.querySelector('.back .card-text');
+        front.textContent = frontText || '';
+        back.textContent = backText || '';
+        const fmut = document.querySelector('.front .muted');
+        const bmut = document.querySelector('.back .muted');
+        fmut.textContent = 'Лицевая сторона';
+        bmut.textContent = 'Обратная сторона';
+    }
+
+    function renderCard() {
+        const cardEl = $('#card');
+        const data = currentCard();
+        setCardTexts(data.front, data.back);
+        cardEl.classList.toggle('flipped', !showingFront);
+        cardEl.setAttribute('aria-pressed', (!showingFront).toString());
+    }
+
+    function onCardClick() {
+        if (showingFront) {
+            showingFront = false;
+            renderCard();
+        } else {
+            nextCard();
+        }
+    }
+
+    function primeSkeleton(active) {
+        document.querySelectorAll('.face').forEach(face => {
+            face.classList.toggle('skeleton', !!active);
+        });
+    }
+
+    // ---------- Init & Events ----------
+    (function () {
+        const urlInput = $('#csvUrl');
+        const startBtn = $('#startBtn');
+        const card = $('#card');
+
+        const saved = localStorage.getItem('csvUrl');
+        if (saved) urlInput.value = saved;
+
+        startBtn.addEventListener('click', async () => {
+            const rawUrl = urlInput.value.trim();
+            if (!rawUrl) {
+                showToast('Вставьте ссылку на Google Sheet или CSV');
+                return;
+            }
+            const csvUrl = toCsvUrl(rawUrl);
+            localStorage.setItem('csvUrl', rawUrl);
+            const frontIdx = parseInt($('#frontSelect').value, 10) || 0;
+
+            primeSkeleton(true);
+            showToast('Загружаю данные…');
+            try {
+                const text = await fetchCSV(csvUrl);
+                const rows = parseCSV(text);
+                const filtered = rows.filter(r => r && (r[0] !== undefined || r[1] !== undefined));
+                const skipHeader = $('#skipHeader').checked;
+                const dataRows = skipHeader && filtered.length ? filtered.slice(1) : filtered;
+                cards = dataRows
+                    .map(r => ({front: (r[frontIdx] || '').trim(), back: (r[1 - frontIdx] || '').trim()}))
+                    .filter(c => c.front !== '' || c.back !== '');
+                if (cards.length === 0) throw new Error('Не найдено ни одной пары столбцов');
+                prepareCycle();
+                showingFront = true;
+                primeSkeleton(false);
+                renderCard();
+                showToast(`Готово! Карточек: ${cards.length}`);
+            } catch (err) {
+                primeSkeleton(false);
+                console.error(err);
+                showToast('Не удалось загрузить CSV. Проверьте доступ по ссылке.');
+            }
+        });
+
+        card.addEventListener('click', onCardClick);
+        card.addEventListener('keydown', (e) => {
+            if (e.key === ' ' || e.key === 'Enter') {
+                e.preventDefault();
+                onCardClick();
+            } else if (e.key === 'ArrowRight') {
+                onCardClick();
+            }
+        });
+
+        document.querySelector('.stage').addEventListener('click', (e) => {
+            const inCard = e.target.closest('#card');
+            const inTop = e.target.closest('.topbar');
+            if (!inCard && !inTop) {
+                onCardClick();
+            }
+        });
+    })();
+</script>
+</body>
+</html>
