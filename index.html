@@ -130,6 +130,7 @@
         }
 
         .card {
+            user-select: none;
             position: relative;
             width: 100%;
             height: 100%;
@@ -285,10 +286,18 @@
         showToast._tmr = setTimeout(() => t.classList.add('hidden'), timeout);
     }
 
+    function randInt(n) {
+        return Math.floor(Math.random() * n);
+    }
+
+    function swap(arr, i, j) {
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+
     function shuffle(arr) {
         for (let i = arr.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [arr[i], arr[j]] = [arr[j], arr[i]];
+            const j = randInt(i + 1);
+            swap(arr, i, j)
         }
         return arr;
     }
@@ -373,7 +382,12 @@
     let showingFront = true; // whether front currently visible
 
     function prepareCycle() {
+        let lastIdx = order[order.length - 1];
         order = shuffle([...Array(cards.length).keys()]);
+        if (order[0] === lastIdx && order.length > 1) {
+            let i = randInt(order.length - 1) + 1;
+            swap(order, 0, i);
+        }
         idx = 0;
     }
 
