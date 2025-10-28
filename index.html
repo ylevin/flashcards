@@ -135,7 +135,11 @@
             width: 100%;
             height: 100%;
             transform-style: preserve-3d;
-            transition: transform 1000ms cubic-bezier(.2, .7, .1, 1), filter 1000ms;
+            transition: transform 1s cubic-bezier(.2, .7, .1, 1), filter 1s;
+        }
+
+        .card.swap {
+            animation: swap 1s;
         }
 
         .card.flipped {
@@ -179,12 +183,12 @@
             margin-bottom: 14px
         }
 
-        .card:not(.flipped) .front .card-text, .card:not(.flipped) .front .muted {
-            animation: popIn 380ms ease both
+        .card.swap .front .card-text, .card.swap .front .muted {
+            animation: popInSwap 1s ease both
         }
 
         .card.flipped .back .card-text, .card.flipped .back .muted {
-            animation: popIn 380ms ease 90ms both
+            animation: popIn 1s ease 90ms both
         }
 
         @keyframes popIn {
@@ -196,6 +200,18 @@
                 opacity: 1;
                 transform: none
             }
+        }
+
+        @keyframes popInSwap {
+            0%   { opacity: 0; }
+            50%  { opacity: 0; }
+            100% { opacity: 1; }
+        }
+
+        @keyframes swap {
+            0%   { transform: translateY(0); opacity: 0; }
+            50%  { transform: translateY(100%); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
         }
 
         .toast {
@@ -263,7 +279,7 @@
             <section class="face back skeleton">
                 <div>
                     <div class="muted">Обратная сторона</div>
-                    <div class="card-text">Тут будет вторая колонка</div>
+                    <div class="card-text">Тут будет другая колонка</div>
                 </div>
             </section>
         </div>
@@ -380,6 +396,7 @@
     let order = [];          // shuffled indices for current cycle
     let idx = 0;             // index inside 'order'
     let showingFront = true; // whether front currently visible
+    let animationInProgress = false;
 
     function prepareCycle() {
         let lastIdx = order[order.length - 1];
@@ -421,15 +438,23 @@
         if (!showingFront) {
             setBackCardText(data.back);
         }
+        cardElem.classList.toggle('swap', showingFront);
         cardElem.classList.toggle('flipped', !showingFront);
         cardElem.setAttribute('aria-pressed', (!showingFront).toString());
     }
 
+    function onEndAnimation() {
+        animationInProgress = false;
+    }
+
     function onCardClick() {
+        if (animationInProgress) return
+
         if (showingFront) {
             showingFront = false;
             renderCard();
         } else {
+            animationInProgress = true;
             nextCard();
         }
     }
@@ -493,6 +518,10 @@
                 onCardClick();
             }
         });
+
+        card.addEventListener('animationend', (e) => {
+            onEndAnimation()
+        })
 
         document.querySelector('.stage').addEventListener('click', (e) => {
             const inCard = e.target.closest('#card');
