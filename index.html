@@ -488,7 +488,6 @@
                 return;
             }
             const csvUrl = toCsvUrl(rawUrl);
-            localStorage.setItem('csvUrl', rawUrl);
             const frontIdx = parseInt($('#frontSelect').value, 10) || 0;
             const backIdx = 1 - frontIdx
 
@@ -503,12 +502,17 @@
                 cards = dataRows
                     .map(r => ({front: (r[frontIdx] || '').trim(), back: (r[backIdx] || '').trim()}))
                     .filter(c => c.front !== '' || c.back !== '');
-                if (cards.length === 0) throw new Error('Не найдено ни одной пары столбцов');
-                prepareCycle();
-                showingFront = true;
-                primeSkeleton(false);
-                renderCard();
-                showToast(`Готово! Карточек: ${cards.length}`);
+
+                if (cards.length === 0) {
+                    showToast('Не найдено ни одной пары столбцов');
+                } else {
+                    prepareCycle();
+                    showingFront = true;
+                    primeSkeleton(false);
+                    renderCard();
+                    localStorage.setItem('csvUrl', rawUrl);
+                    showToast(`Готово! Карточек: ${cards.length}`);
+                }
             } catch (err) {
                 primeSkeleton(false);
                 console.error(err);
